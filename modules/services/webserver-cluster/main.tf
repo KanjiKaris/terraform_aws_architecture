@@ -18,7 +18,7 @@
 # }
 
 resource "aws_security_group" "instance" {
-  name        = "terraform-example-instance-sg"
+  name        = "${var.cluster_name}-instance-sg"
   description = "Security group for the Terraform example instance"
 
   ingress {
@@ -30,8 +30,8 @@ resource "aws_security_group" "instance" {
 }
 
 resource "aws_launch_template" "example" {
-  image_id        = "ami-06067086cf86c58e6"
-  instance_type   = "t2.micro"
+  image_id        = var.ami_id
+  instance_type   = var.instance_type
   vpc_security_group_ids = [aws_security_group.instance.id]
 
   user_data = base64encode(templatefile("${path.module}/user-data.sh", {
@@ -58,11 +58,11 @@ resource "aws_autoscaling_group" "example_asg" {
   min_size = 2
   max_size = 10
 
-#   tag = [{
-#       key                 = "Name"
-#       value               = "terraform-asg-example"
-#       propagate_at_launch = true
-#     }]
+  tag {
+      key                 = "Name"
+      value               = var.cluster_name
+      propagate_at_launch = true
+    }
 }
 
 data "aws_vpc" "default" {
@@ -77,7 +77,7 @@ data "aws_subnets" "default" {
 }
 
 resource "aws_lb" "example" {
-  name               = "terraform-asg-example"
+  name               = var.cluster_name
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
   subnets            = data.aws_subnets.default.ids
@@ -100,7 +100,7 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_security_group" "alb" {
-  name = "terraform-example-alb"
+  name = "${var.cluster_name}-alb-sg"
 
   #allow inbound HTTP requests
   ingress {
@@ -120,7 +120,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_lb_target_group" "asg" {
-  name     = "terraform-asg-example"
+  name     = "${var.cluster_name}-asg"
   port     = var.server_port
   protocol = "HTTP"
   vpc_id   = data.aws_vpc.default.id
@@ -156,8 +156,8 @@ data "terraform_remote_state" "mysql" {
   backend = "s3"
 
   config = {
-    bucket = "kanji-terraform-state-bucket"
-    key    = "stage/data-stores/mysql/terraform.tfstate"
+    bucket = var.db_remote_state_bucket
+    key    = var.db_remote_state_key
     region = "us-east-1"
   }
 }
