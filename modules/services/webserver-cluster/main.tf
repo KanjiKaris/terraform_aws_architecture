@@ -27,10 +27,27 @@ resource "aws_security_group" "instance" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  owners = ["amazon"]
+
+  filter {
+    name = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
 }
 
 resource "aws_launch_template" "example" {
-  image_id        = var.ami_id
+  image_id = data.aws_ami.amazon_linux_2.id
   instance_type   = var.instance_type
   vpc_security_group_ids = [aws_security_group.instance.id]
 
@@ -55,8 +72,8 @@ resource "aws_autoscaling_group" "example_asg" {
   target_group_arns = [aws_lb_target_group.asg.arn]
   health_check_type = "ELB"
 
-  min_size = 2
-  max_size = 10
+  min_size = var.min_size
+  max_size = var.max_size
 
   tag {
       key                 = "Name"

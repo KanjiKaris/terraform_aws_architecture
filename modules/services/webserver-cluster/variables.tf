@@ -34,7 +34,3 @@ variable "max_size" {
   type = number
 }
 
-variable "ami_id" {
-  description = "The AMI ID for the EC2 instances"
-  type    = string
-}
